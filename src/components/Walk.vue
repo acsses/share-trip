@@ -28,10 +28,11 @@ const props = defineProps<{
   trip: Trip
 }>();
 
+console.log(props.trip)
+
 </script>
 
 <style scoped>
-
 .Walk {
   display: flex;
   align-items: top;

@@ -145,8 +145,30 @@ const header_changes = (value?: header):void => {
     journy.header.name = value.name;
     journy.name = value.name;
 
+    var start = `${now_date.getFullYear()}/${value.month}/${value.day}`
+
+    for (const trip of journy.trips) {
+      if (trip.type === 'Station') {
+        trip.start.date = start;
+        trip.end.date = start;
+      }
+      else if (trip.type === 'Line') {
+        trip.start.date = start;
+        trip.end.date = start;
+      }
+      else if (trip.type === 'Stay') {
+        start = `${now_date.getFullYear()}/${value.month}/${parseInt(value.day)+1}`
+        trip.start.date = start;
+        trip.end.date = start;
+      }
+      else if (trip.type === 'Walk') {
+        trip.start.date = start;
+        trip.end.date = start;
+      }
+
     console.log(journy)
   }
+}
 }
 
 const save = async (value?: header) => {

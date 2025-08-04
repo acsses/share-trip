@@ -104,17 +104,17 @@ const selected = (event: Event):void => {
       <svg viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="Pattern_R" x="0" y="0" width="1" height=".2">
-            <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" />
-            <line x1="20" y1="0" x2="20" y2="10" stroke="white" stroke-width="2" />
-            <line x1="5" y1="5" x2="25" y2="5" stroke="white" stroke-width="2" />
+            <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="20" y1="0" x2="20" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="5" y1="5" x2="25" y2="5" stroke="white" stroke-width="2" class = "icon-path"/>
           </pattern>
           <pattern id="Pattern_F" x="0" y="0" width="1" height=".25">
-            <path d="M 15,9 A 4.5 4.5 0 0 1 15 0 " stroke="white"  stroke-width="1" fill="none"/>
+            <path d="M 15,9 A 4.5 4.5 0 0 1 15 0 " stroke="white"  stroke-width="1" fill="none" class = "icon-path"/>
           </pattern>
           <pattern id="Pattern_P" x="0" y="0" width="1" height=".2">
-            <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" />
-            <line x1="30" y1="0" x2="30" y2="10" stroke="white" stroke-width="2" />
-            <line x1="20" y1="0" x2="20" y2="5" stroke="white" stroke-width="2" />
+            <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="30" y1="0" x2="30" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="20" y1="0" x2="20" y2="5" stroke="white" stroke-width="2" class = "icon-path"/>
           </pattern>
         </defs>
         <rect fill="url(#Pattern_R)" width="100" height="40" v-if="props.trip.kind  == 'R'"/>

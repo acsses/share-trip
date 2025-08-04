@@ -11,6 +11,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+}
+
+.icon-path{
+  stroke: white;
 }
 
 a {
@@ -69,6 +74,9 @@ button:focus-visible {
   :root {
     color: #213547;
     background-color: #ffffff;
+  }
+  .icon-path{
+    stroke: #213547;
   }
   a:hover {
     color: #747bff;

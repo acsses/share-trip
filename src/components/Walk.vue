@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted,watch,defineEmits } from 'vue';
+import { watch,defineEmits } from 'vue';
 import { type Trip,type changes } from  './types'
 import axios from 'axios'
 

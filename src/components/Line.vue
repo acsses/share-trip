@@ -10,8 +10,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e:'selected',value?:changes):void,
-    (e:'changed',value?:changes):void}
->()
+    (e:'changed',value?:changes):void
+}>()
 
 const name = ref<string>('')
 
@@ -100,29 +100,29 @@ const selected = (event: Event):void => {
 <template>
   <div class="Line">
     <div class="times">
-      <h3 class="time">{{ props.trip.start.date }} {{ props.trip.start.time }}</h3>
+      <h3 class="time"><span class="date">{{ props.trip.start.date }}</span> {{ props.trip.start.time }}</h3>
       <svg viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern id="Pattern_R" x="0" y="0" width="1" height=".2">
+          <pattern id="Pattern_R" x="0" y="0" viewBox="0,0,25,10" width="1" height=".2">
             <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
             <line x1="20" y1="0" x2="20" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
             <line x1="5" y1="5" x2="25" y2="5" stroke="white" stroke-width="2" class = "icon-path"/>
           </pattern>
-          <pattern id="Pattern_F" x="0" y="0" width="1" height=".25">
+          <pattern id="Pattern_F" x="0" y="0" viewBox="0,0,30,10"width="1" height=".25">
             <path d="M 15,9 A 4.5 4.5 0 0 1 15 0 " stroke="white"  stroke-width="1" fill="none" class = "icon-path"/>
           </pattern>
-          <pattern id="Pattern_P" x="0" y="0" width="1" height=".2">
+          <pattern id="Pattern_P" x="0" y="0" viewBox="0,0,30,10" width="1" height=".2">
             <line x1="10" y1="0" x2="10" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
-            <line x1="30" y1="0" x2="30" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
-            <line x1="20" y1="0" x2="20" y2="5" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="25" y1="0" x2="25" y2="10" stroke="white" stroke-width="2" class = "icon-path"/>
+            <line x1="17.5" y1="0" x2="17.5" y2="5" stroke="white" stroke-width="2" class = "icon-path"/>
           </pattern>
         </defs>
-        <rect fill="url(#Pattern_R)" width="100" height="40" v-if="props.trip.kind  == 'R'"/>
-        <rect fill="url(#Pattern_F)" width="100" height="40" v-else-if="props.trip.kind  == 'F'"/>
-        <rect fill="url(#Pattern_P)" width="100" height="40" v-else-if="props.trip.kind  == 'P'"/>
-        <rect fill="url(#Pattern_R)" width="100" height="40" v-else />
+        <rect fill="url(#Pattern_R)" width="100%" height="40" v-if="props.trip.kind  == 'R'"/>
+        <rect fill="url(#Pattern_F)" width="100%" height="40" v-else-if="props.trip.kind  == 'F'"/>
+        <rect fill="url(#Pattern_P)" width="100%" height="40" v-else-if="props.trip.kind  == 'P'"/>
+        <rect fill="url(#Pattern_R)" width="100%" height="40" v-else />
       </svg>
-      <h3 class="time">{{ props.trip.end?.date ?? '' }} {{ props.trip.end?.time ?? '' }}</h3>
+      <h3 class="time"><span class="date">{{ props.trip.end?.date ?? '' }}</span> {{ props.trip.end?.time ?? '' }}</h3>
     </div>
     <div class="detail">
       <div v-if="props.edit">

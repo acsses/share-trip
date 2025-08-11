@@ -1,7 +1,7 @@
 <template>
     <div class="Stay">
         <div class="times">
-          <h3 class="time">--------------</h3>
+          <h3 class="time"><span class="date">--------</span>------</h3>
         </div>
         <div class="detail">
             <h3>宿泊</h3>

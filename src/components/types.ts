@@ -9,11 +9,19 @@ export type changes = {
   start?: {
     date: string;
     time: string;
+
+    latitude?: number;
+    longitude?: number;
   };
   end?: {
     date: string;
     time: string;
+
+    latitude?: number;
+    longitude?: number;
   };
+  geometry?:any;
+  kind?: string;
 };
 
 export type Trip = {
@@ -23,11 +31,18 @@ export type Trip = {
   start: {
     date: string;
     time: string;
+
+    latitude?: number;
+    longitude?: number;
   };
   end: {
     date: string;
     time: string;
+
+    latitude?: number;
+    longitude?: number;
   };
+  geometry?:any;
   kind?: string;
   editable?: boolean;
   href?: string; // Added href to Trip type

@@ -42,13 +42,24 @@ const dir_list = ref<{text:string,href:string}[]>([])
 const selected = ref<string>('')
 
 onMounted(async () => {
-  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
-  console.log(response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name))
+  
 
 })
 
 
 const select_next = async (event: Event) => {
+  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
+  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0].location;
+  const changes = props.trip;
+  changes.start = props.trip.start
+
+  changes.start.latitude = Number(loc.lat ?? '0');
+  changes.start.longitude = Number(loc.lon ?? '0');
+
+  changes.start.date = props.trip.start.date
+  changes.start.time = props.trip.start.time
+  emit('change', changes);
+
   const target = event.target as HTMLSelectElement;
   if(target.value == 'line'){
     const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/station",{params:{name:props.trip.name,kind:props.trip.kind}})
@@ -81,16 +92,17 @@ const select_line = async (event: Event) => {
   })
 }
 
-const selected_candi = (event?: { name: string, kind?: string }) => {
+const selected_candi = (event?: { name: string, kind?: string, location?: { lat: string, lon: string } }) => {
   const selected_name = event?.name;
   const selected_kind = event?.kind;
-  console.log(selected_name)
-  console.log(selected_kind)
+  const selected_location = event?.location;
 
   const changes = props.trip;
   changes.name = selected_name ?? '';
   changes.editable = false;
   changes.kind = selected_kind;
+  changes.start.latitude = Number(selected_location?.lat) ?? 0;
+  changes.start.longitude = Number(selected_location?.lon) ?? 0;
   emit('change', changes);
 
 }
@@ -99,7 +111,7 @@ const selected_candi = (event?: { name: string, kind?: string }) => {
 <template>
   <div class="Station">
     <div class="times">
-      <h3 class="time">{{ props.trip.start.date }} {{ props.trip.start.time }}</h3>
+      <h3 class="time"><span class="date">{{ props.trip.start.date }}</span> {{ props.trip.start.time }}</h3>
     </div>
     <div class="detail">
       <SearchBox v-if="props.trip.editable" @change="selected_candi"></SearchBox>

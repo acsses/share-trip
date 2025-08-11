@@ -92,6 +92,7 @@ console.log(props.id)
   color: #9c9c9c;
   margin-right: 50px;
 }
+
 .detail {
     width:270px;
 }
@@ -104,5 +105,24 @@ console.log(props.id)
 }
 .margin {
   margin-bottom: 40px;
+}
+@media (max-width: 500px) {
+  .times{
+    width: 30vw !important;
+  }
+  .time{
+    margin: auto !important;
+  }
+  .time .date{
+    display: none;
+  }
+  .detail{
+    width: 70vw;
+  }
+
+  svg{
+    width: 30vw;
+  }
+
 }
 </style>

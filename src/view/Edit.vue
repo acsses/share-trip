@@ -4,9 +4,12 @@ import Station from '../components/Station.vue';
 import Line from '../components/Line.vue';
 import Stay from '../components/Stay.vue';
 import Header from '../components/Header.vue';
+import Walk from '../components/Walk.vue';
 import { type changes, type Trip, type header } from  '../components/types'
 
 import axios from 'axios'
+import "leaflet/dist/leaflet.css";
+import { LMap, LTileLayer, LPolyline } from '@vue-leaflet/vue-leaflet';
 
 
 const props = defineProps<{
@@ -17,15 +20,17 @@ const journy = reactive({
   id:0,
   name: '',
   header: {
-    season: '夏',
+    season: '',
     month: '',
     day: '',
-    destination: '広島',
+    destination: '',
     travelType: '',
     name: ''
   },
   trips: [] as Trip[]
 })
+
+const walk_lines = reactive<{id:number,geometry?:any}[]>([])
 
 const now_date = new Date();
 
@@ -93,6 +98,8 @@ const changed_el = (value?: changes):void => {
     trip.start = value?.start ?? {date:'',time:''}
     trip.end = value?.end ?? {date:'',time:''}
   }
+
+  console.log("changed");
 }
 
 const selected_stay = (value?: {id:number}):void => {
@@ -124,12 +131,31 @@ const selected_walk = (value?: {id:number}):void => {
   const trip = journy.trips.find(item => item.id === value?.id)
 
   if (trip) {
-    trip.end = trip.start;
+  //  trip.end = trip.start;
+    trip.end.date = trip.start.date
+    trip.end.time = trip.start.time
+    trip.end.latitude = trip.start.latitude
+    trip.end.longitude = trip.start.longitude
   }
 
-  journy.trips.push({id:journy.trips.length,type:'Walk',name:'',start:trip?.start ?? {date:'',time:''},end: {date:'',time:''}})
+  journy.trips.push({
+    id:journy.trips.length,
+    type:'Walk',
+    name:'Walk',
+    start:trip?.end ?? {date:'',time:''},
+    end: {date:'',time:''}}
+  )
 
-  journy.trips.push({id:journy.trips.length,type:'Station',name:'',start:trip?.start ?? {date:'',time:''},end: {date:'',time:''},editable:true})
+  journy.trips.push({
+    id:journy.trips.length,
+    type:'Station',
+    name:'',
+    start:trip?.start ?? {date:'',time:''},
+    end: {date:'',time:''},
+    editable:true
+  })
+
+  console.log(journy)
 }
 
 const header_changes = (value?: header):void => {
@@ -194,31 +220,121 @@ const save = async (value?: header) => {
   // You can implement the logic to save the journey data here
 }
 
+const change_st = async (value?: changes) => {
+  console.log("change",value)
+  console.log("first",journy)
+  if (value?.id !== undefined && value.id < journy.trips.length) {
+    const trip = journy.trips.find(item => item.id === value.id);
+    if (trip) {
+      if (value?.end) {
+        trip.end.date = value?.end?.date ?? ""
+        trip.end.time = value?.end?.time ?? "";
+      }
+      if (value?.name) {
+        trip.name = value.name;
+      }
+      if (value?.start?.latitude !== undefined || value?.start?.longitude !== undefined) {
+        trip.start.latitude = value.start.latitude;
+        trip.start.longitude = value.start.longitude;
+
+        const prev = journy.trips.find(item => item.id === value.id - 1);
+
+
+        if (prev&& prev.type === 'Walk') {
+          prev.end.latitude = value.start.latitude;
+          prev.end.longitude = value.start.longitude;
+        }
+
+      }
+    }
+  }
+}
+
+const change_walk = (value?: changes):void => {
+  console.log("called",value)
+  if (value?.id !== undefined && value.id < journy.trips.length) {
+    const trip = journy.trips.find(item => item.id === value.id);
+    if (trip) {
+      trip.name = value?.name ?? trip.name
+      trip.start = value?.start ?? trip.start;
+      trip.end = value?.end ?? trip.end;
+      trip.geometry = value?.geometry ?? trip.geometry;
+    }
+  }
+  if (value?.geometry) {
+    const walk_line = walk_lines.find(item => item.id === value.id);
+    if (walk_line) {
+      walk_line.geometry = value.geometry;
+    } else {
+      walk_lines.push({id: value.id, geometry: value.geometry});
+    }
+  }
+
+  console.log("walk_lines", walk_lines)
+}
+
 </script>
 
 <template>
   <Header :header="journy.header" :edit="true" @changed="header_changes" @save="save"/>
-  <div class="margin"></div>
-  <div>
-    <template v-for="trip in journy.trips" :key="trip.name">
-      <div v-if="trip.type == 'Station'" class="sectioon">
-        <Station :trip="trip" :edit="true" @selected="selected_line" @stay="selected_stay" @walk="selected_walk"/>
+  <div class="box">
+    <div class="journy">
+      <div class="margin"></div>
+      <div>
+        <template v-for="trip in journy.trips" :key="trip.name">
+          <div v-if="trip.type == 'Station'" class="sectioon">
+            <Station :trip="trip" :edit="true" @selected="selected_line" @stay="selected_stay" @walk="selected_walk" @change="change_st"/>
+          </div>
+          <div v-else-if="trip.type == 'Line'" class="sectioon">
+            <Line :trip="trip" :edit="true" @selected="selected_stop" @changed="changed_el"/>
+          </div>
+          <div v-else-if="trip.type == 'Stay'" class="sectioon">
+            <Stay/>
+          </div>
+          <div v-else-if="trip.type == 'Walk'" class="sectioon" >
+            <Walk :trip="trip" @changed="change_walk"/>
+          </div>
+        </template>
       </div>
-      <div v-else-if="trip.type == 'Line'" class="sectioon">
-        <Line :trip="trip" :edit="true" @selected="selected_stop" @changed="changed_el"/>
-      </div>
-      <div v-else-if="trip.type == 'Stay'" class="sectioon">
-        <Stay/>
-      </div>
-      <div v-else-if="trip.type == 'Walk'" class="sectioon">
-        <h3>徒歩</h3>
-      </div>
-    </template>
+    </div>
+    <div class="map">
+    <LMap id="map" :zoom="8" :center="[32.205869963387336, 131.336749005514]" :use-global-leaflet="false">
+      <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" ></LTileLayer>
+
+      <LPolyline
+        v-for="line in walk_lines"
+        :key="line.id"
+        :lat-lngs="line.geometry?.coordinates"
+        color="#3388ff"
+      />
+    </LMap>
+    </div>
+
   </div>
+        <p v-for="line in walk_lines">{{ line.geometry?.coordinates[0],line.geometry?.coordinates[1] }}</p>
+
 </template>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+.box {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.journy {
+  width: 50vw;
+  height: 100vh;
+  overflow-y: scroll;
+}
+.map {
+  z-index: 0;
+  width: 50vw;
+  height: 100vh;
+}
+
 
 .time{
   font-family: "Roboto Mono", monospace;
@@ -237,6 +353,6 @@ const save = async (value?: header) => {
   margin-bottom: 20px;
 }
 .margin {
-  margin-bottom: 40px;
+  margin-bottom: 20vh;
 }
 </style>

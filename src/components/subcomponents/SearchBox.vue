@@ -3,7 +3,7 @@ import { ref, defineEmits } from 'vue';
 import axios  from 'axios'
 
 const emit = defineEmits<{
-  (e: 'change', value?: { name: string, kind?: string }): void,
+  (e: 'change', value?: { name: string, kind?: string, location?: { lat: string, lon: string } }): void,
 }>();
 
 const candi_list = ref<{name:string,location:{lat:string,lon:string},kind?:string}[]>([])
@@ -18,7 +18,8 @@ const edit_name = async (event: Event) => {
 
 const selected_candi = async (event: Event) => {
   const candi = candi_list.value.find(item => item.name === (event.target as HTMLDivElement).textContent?.trim());
-  emit('change', { name: (event.target as HTMLDivElement).textContent?.trim() ?? '', kind: candi?.kind });
+  console.log(candi);
+  emit('change', { name: (event.target as HTMLDivElement).textContent?.trim() ?? '', kind: candi?.kind, location: { lat: candi?.location.lat ?? '', lon: candi?.location.lon ?? '' } });
 }
 </script>
 

@@ -16,7 +16,6 @@ const name = ref<string>('')
 
 
 onMounted(() => {
-    console.log(props.header);
     season.value = props.header.season;
     month.value = props.header.month;
     day.value = props.header.day;
@@ -126,6 +125,7 @@ header{
   align-items: center;
   justify-content: start;
   backdrop-filter: blur(10px);
+  z-index: 2;
 
 }
 header > input{

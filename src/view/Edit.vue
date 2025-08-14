@@ -9,7 +9,7 @@ import { type changes, type Trip, type header } from  '../components/types'
 
 import axios from 'axios'
 import "leaflet/dist/leaflet.css";
-import { LMap, LTileLayer, LPolyline } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LPolyline, LMarker } from '@vue-leaflet/vue-leaflet';
 
 
 const props = defineProps<{
@@ -30,6 +30,8 @@ const journy = reactive({
   trips: [] as Trip[]
 })
 
+
+const points = reactive<{id:number,geometry?:any}[]>([])
 const walk_lines = reactive<{id:number,geometry?:any}[]>([])
 
 const now_date = new Date();
@@ -221,8 +223,6 @@ const save = async (value?: header) => {
 }
 
 const change_st = async (value?: changes) => {
-  console.log("change",value)
-  console.log("first",journy)
   if (value?.id !== undefined && value.id < journy.trips.length) {
     const trip = journy.trips.find(item => item.id === value.id);
     if (trip) {
@@ -250,6 +250,17 @@ const change_st = async (value?: changes) => {
   }
 }
 
+const draw = (value?: {id:number, geometry:any}):void =>{
+  if (value?.geometry) {
+      if (value.geometry.type === 'LineString') {
+          walk_lines.push({id: value.id, geometry: value.geometry});
+      } else if (value.geometry.type === 'Point') {
+          points.push({id: value.id, geometry: value.geometry});
+      }
+  }
+  console.log("draw",value);
+}
+
 const change_walk = (value?: changes):void => {
   console.log("called",value)
   if (value?.id !== undefined && value.id < journy.trips.length) {
@@ -261,14 +272,7 @@ const change_walk = (value?: changes):void => {
       trip.geometry = value?.geometry ?? trip.geometry;
     }
   }
-  if (value?.geometry) {
-    const walk_line = walk_lines.find(item => item.id === value.id);
-    if (walk_line) {
-      walk_line.geometry = value.geometry;
-    } else {
-      walk_lines.push({id: value.id, geometry: value.geometry});
-    }
-  }
+  
 
   console.log("walk_lines", walk_lines)
 }
@@ -283,7 +287,13 @@ const change_walk = (value?: changes):void => {
       <div>
         <template v-for="trip in journy.trips" :key="trip.name">
           <div v-if="trip.type == 'Station'" class="sectioon">
-            <Station :trip="trip" :edit="true" @selected="selected_line" @stay="selected_stay" @walk="selected_walk" @change="change_st"/>
+            <Station :trip="trip" :edit="true"
+                      @selected="selected_line"
+                      @stay="selected_stay"
+                      @walk="selected_walk"
+                      @change="change_st"
+                      @draw="draw"
+            />
           </div>
           <div v-else-if="trip.type == 'Line'" class="sectioon">
             <Line :trip="trip" :edit="true" @selected="selected_stop" @changed="changed_el"/>
@@ -292,7 +302,7 @@ const change_walk = (value?: changes):void => {
             <Stay/>
           </div>
           <div v-else-if="trip.type == 'Walk'" class="sectioon" >
-            <Walk :trip="trip" @changed="change_walk"/>
+            <Walk :trip="trip" @changed="change_walk" @draw="draw"/>
           </div>
         </template>
       </div>
@@ -300,6 +310,11 @@ const change_walk = (value?: changes):void => {
     <div class="map">
     <LMap id="map" :zoom="8" :center="[32.205869963387336, 131.336749005514]" :use-global-leaflet="false">
       <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" ></LTileLayer>
+      <LMarker
+        v-for="point in points"
+        :key="point.id"
+        :latLng="point.geometry?.coordinates"
+      />
 
       <LPolyline
         v-for="line in walk_lines"
@@ -311,7 +326,6 @@ const change_walk = (value?: changes):void => {
     </div>
 
   </div>
-        <p v-for="line in walk_lines">{{ line.geometry?.coordinates[0],line.geometry?.coordinates[1] }}</p>
 
 </template>
 

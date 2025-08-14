@@ -32,6 +32,7 @@ const emit = defineEmits<{
   (e:'walk',value?:{
     id:number,
   }):void,
+  (e:'draw',value?:{id:number, geometry:any}):void
 
 }>()
 
@@ -42,7 +43,14 @@ const dir_list = ref<{text:string,href:string}[]>([])
 const selected = ref<string>('')
 
 onMounted(async () => {
-  
+  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
+  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0].location;
+  const geometry = {
+    type: 'Point',
+    coordinates: [Number(loc.lat ?? '0'), Number(loc.lon ?? '0')]
+  }
+  console.log(geometry)
+  emit('draw', {id: props.trip.id, geometry: geometry});
 
 })
 

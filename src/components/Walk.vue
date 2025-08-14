@@ -31,6 +31,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e:'changed',value?:changes):void,
+  (e:'draw',value?:{id:number, geometry:any}):void
 }>()
 
 watch(() => props.trip, async (newTrip) => {
@@ -87,6 +88,7 @@ watch(() => props.trip, async (newTrip) => {
     };
 
     emit('changed', changes);
+    emit('draw', {id: props.trip.id, geometry: geometry});
   }
 }, { immediate: true,deep: true });
 

@@ -44,25 +44,31 @@ const selected = ref<string>('')
 
 onMounted(async () => {
   const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
-  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0].location;
+  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0]?.location;
   const geometry = {
     type: 'Point',
-    coordinates: [Number(loc.lat ?? '0'), Number(loc.lon ?? '0')]
+    coordinates: [Number(loc?.lat ?? '0'), Number(loc?.lon ?? '0')]
   }
-  console.log(geometry)
+  
   emit('draw', {id: props.trip.id, geometry: geometry});
 
 })
 
 
 const select_next = async (event: Event) => {
-  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
-  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0].location;
+
+  
+
   const changes = props.trip;
   changes.start = props.trip.start
+  if(props.trip.start.latitude == undefined || props.trip.start.longitude == undefined){
+      const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
+      const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === props.trip.name)[0].location;
+      changes.start.latitude = Number(loc.lat ?? '0');
+      changes.start.longitude = Number(loc.lon ?? '0');
+  }
 
-  changes.start.latitude = Number(loc.lat ?? '0');
-  changes.start.longitude = Number(loc.lon ?? '0');
+  
 
   changes.start.date = props.trip.start.date
   changes.start.time = props.trip.start.time

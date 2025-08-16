@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref,onMounted } from 'vue';
+import { watch,ref,onMounted } from 'vue';
 import axios from 'axios'
 import { type TimeTable, type changes, type Trip } from  './types'
 
@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e:'selected',value?:changes):void,
-    (e:'changed',value?:changes):void
+    (e:'changed',value?:changes):string
 }>()
 
 const name = ref<string>('')
@@ -26,6 +26,30 @@ const timetable = ref<TimeTable>()
 //const timetable = ref<{hour?:string,minutes?:{minutes:string,name:string,link:string}[]}[]>([])
 const minutes = ref<{minutes:string,name:string,link:string}[]>([])
 const train_stops = ref<{station?:string,time?:string,link?:string}[]>([])
+
+watch(() => props.trip, async (newTrip) => {
+  if (newTrip.start.longitude !== undefined && newTrip.start.latitude !== undefined && (newTrip.end.longitude !== undefined && newTrip.end.latitude !== undefined)) {
+    console.log(props.trip.start.latitude, props.trip.start.longitude)
+    console.log(props.trip.end.latitude, props.trip.end.longitude);
+    const response =await axios.get("https://navitime-route-totalnavi.p.rapidapi.com/shape_transit",
+          {
+            headers: {
+              'X-RapidAPI-Key': import.meta.env.VITE_ROUTE_MANAGER_API_KEY,
+              'X-RapidAPI-Host': 'navitime-route-totalnavi.p.rapidapi.com'
+            },
+            params: {
+              start: String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude),
+              goal: String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude),
+              coord_unit: 'degree',
+              format: 'geojson',
+              datum: 'wgs84',
+              speed: 5
+            }
+          }
+        )
+    console.log(response.data);
+  }
+}, { immediate: true,deep: true })
 
 onMounted(async () => {
   const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/time",{params:{href:props.trip.href}})
@@ -52,6 +76,8 @@ onMounted(async () => {
   
 })
 
+
+
 //timetable.value = props.time_table
 
 const selcted_hour = (event: Event) => {
@@ -76,6 +102,8 @@ const selected_train = async (event: Event) => {
     start: {
       date: props.trip.start.date,
       time: hours+":"+selected_train?.minutes,
+      latitude: props.trip.start.latitude,
+      longitude: props.trip.start.longitude
     },
     
     name: name.value

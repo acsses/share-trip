@@ -44,9 +44,8 @@ onMounted(async () => {
     return;
   }
   const response = await axios.get(`https://vercel-kv-three.vercel.app/api/get/${props.id}`)
-  console.log(response.data)
   if (response.data) {
-    console.log(response.data.data[0])
+  
     const data = JSON.parse(response.data.data[0].data);
     journy.id = response.data.id;
     journy.name = data.name;
@@ -56,7 +55,6 @@ onMounted(async () => {
     console.log('No data found for the given ID');
   }
 })
-console.log(props.id)
 
 const selected_line = (value?: {id:number,start:{date:string,time:string},href:string}):void => {
   //timetable.time_table = value?.table ?? []
@@ -71,14 +69,20 @@ const selected_line = (value?: {id:number,start:{date:string,time:string},href:s
     id:journy.trips.length,
     type:'Line',
     name:'',
-    start:{date:last.start.date,time:value?.start.time ?? ''},
+    start:{
+      date:last.start.date,
+      time:value?.start?.time ?? '',
+      longitude: last.start.longitude,
+      latitude: last.start.latitude
+    },
     end:{date:'',time:''},
     kind: last.kind,
     href: value?.href ?? ''
   })
+
 }
 
-const selected_stop = (value?: changes):void => {
+const selected_stop = async (value?: changes):Promise<void> => {
   if (value?.id !== undefined && value.id < journy.trips.length) {
     journy.trips = journy.trips.filter(item => item.id <= value.id)
   }
@@ -86,10 +90,34 @@ const selected_stop = (value?: changes):void => {
   const trip = journy.trips.find(item => item.id === value?.id)
 
   if (trip && value?.start !== undefined) {
-    trip.end = value.start;
+    trip.end.date = value.start.date;
+    trip.end.time = value.start.time;
   }
 
-  journy.trips.push({id:journy.trips.length,type:'Station',name:value?.name ?? '',start:value?.start ?? {date:"",time:""},end:{date:"",time:""}})
+  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:value?.name}})
+  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === value?.name)[0].location;
+
+  journy.trips.push({
+    id:journy.trips.length,
+    type:'Station',
+    name:value?.name ?? '',
+    start:{
+      date:value?.start?.date ?? '',
+      time:value?.start?.time ?? '',
+      longitude: Number(loc.lon ?? '0') ?? '',
+      latitude: Number(loc.lat ?? '0') ?? ''
+    },
+    end:{date:"",time:""}
+  })
+
+  const prev = (value?.id !== undefined) ? journy.trips.find(item => item.id === value.id) : undefined;
+
+  if (prev !== undefined) {
+    prev.end.latitude = Number(loc.lat ?? '0') ?? '';
+    prev.end.longitude = Number(loc.lon ?? '0') ?? '';
+  }
+
+
 }
 
 const changed_el = (value?: changes):void => {
@@ -100,8 +128,6 @@ const changed_el = (value?: changes):void => {
     trip.start = value?.start ?? {date:'',time:''}
     trip.end = value?.end ?? {date:'',time:''}
   }
-
-  console.log("changed");
 }
 
 const selected_stay = (value?: {id:number}):void => {
@@ -194,14 +220,12 @@ const header_changes = (value?: header):void => {
         trip.end.date = start;
       }
 
-    console.log(journy)
   }
 }
 }
 
 const save = async (value?: header) => {
   if (value) {
-    console.log(value);
     journy.header.season = value.season;
     journy.header.month = value.month;
     journy.header.day = value.day;
@@ -215,7 +239,6 @@ const save = async (value?: header) => {
 
   const response = await axios.post("https://vercel-kv-three.vercel.app/api/save",{id:journy.id, data:JSON.stringify(journy)})
 
-  console.log(response.data.id)
   console.log('Saving journey:', journy);
 
   journy.id = response.data.id;
@@ -262,7 +285,6 @@ const draw = (value?: {id:number, geometry:any}):void =>{
 }
 
 const change_walk = (value?: changes):void => {
-  console.log("called",value)
   if (value?.id !== undefined && value.id < journy.trips.length) {
     const trip = journy.trips.find(item => item.id === value.id);
     if (trip) {
@@ -273,8 +295,6 @@ const change_walk = (value?: changes):void => {
     }
   }
   
-
-  console.log("walk_lines", walk_lines)
 }
 
 </script>

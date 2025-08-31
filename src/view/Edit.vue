@@ -42,7 +42,7 @@ const map_zoom = ref<number>(8);
 
 const now_date = new Date();
 
-journy.trips.push({id:0,type:'Station',name:'京都',start:{date:`${now_date.getFullYear()}/${now_date.getMonth() + 1}/${now_date.getDate()}`,time:'08:30'},end:{date:'',time:''},kind:"R"})
+journy.trips.push({id:0,type:'Station',name:'京都',start:{date:`${now_date.getFullYear()}/${now_date.getMonth() + 1}/${now_date.getDate()}`,time:'08:30'},end:{date:'',time:''},kind:"R",editable:true})
 
 onMounted(async () => {
   if (isNaN(props.id)) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive,onMounted } from 'vue';
+import { reactive,onMounted, ref } from 'vue';
 import Station from '../components/Station.vue';
 import Line from '../components/Line.vue';
 import Stay from '../components/Stay.vue';
@@ -9,8 +9,9 @@ import { type changes, type Trip, type header } from  '../components/types'
 
 import axios from 'axios'
 import "leaflet/dist/leaflet.css";
-import { LMap, LTileLayer, LPolyline, LMarker } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LPolyline, LMarker, LControlZoom } from '@vue-leaflet/vue-leaflet';
 
+  
 
 const props = defineProps<{
     id: number
@@ -33,6 +34,11 @@ const journy = reactive({
 
 const points = reactive<{id:number,geometry?:any}[]>([])
 const walk_lines = reactive<{id:number,geometry?:any}[]>([])
+const transport_lines = reactive<{id:number,geometry?:any}[]>([])
+
+const map_center = ref<[number, number]>([32.205869963387336, 131.336749005514])
+const map_bounds = ref<[[number, number], [number, number]]>([[0, 0], [0, 0]]);
+const map_zoom = ref<number>(8);
 
 const now_date = new Date();
 
@@ -51,6 +57,7 @@ onMounted(async () => {
     journy.name = data.name;
     journy.header = data.header;
     journy.trips = data.trips;
+    console.log('Journey data loaded:', data.header);
   } else {
     console.log('No data found for the given ID');
   }
@@ -60,6 +67,8 @@ const selected_line = (value?: {id:number,start:{date:string,time:string},href:s
   //timetable.time_table = value?.table ?? []
 
   if (value?.id !== undefined && value.id < journy.trips.length) {
+    console.log("Removing trips after:", value.id);
+    console.log("href: ", value.href);
     journy.trips = journy.trips.filter(item => item.id <= value.id)
   }
 
@@ -95,7 +104,7 @@ const selected_stop = async (value?: changes):Promise<void> => {
   }
 
   const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:value?.name}})
-  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name === value?.name)[0].location;
+  const loc = response.data.result.filter((e:{name:string,location:{lat:string,lon:string}})=>e.name.replace(/〔.*〕/g, "") === value?.name)[0].location;
 
   journy.trips.push({
     id:journy.trips.length,
@@ -146,9 +155,14 @@ const selected_stay = (value?: {id:number}):void => {
   const new_date = new Date();
   new_date.toLocaleString()
 
+  const year = trip?.end.date.split('/')[0] ?? `${now_date.getFullYear()}`
+  const month = trip?.end.date.split('/')[1] ?? `${now_date.getMonth() + 1}`
+  const day = trip?.end.date.split('/')[2] ?? `${now_date.getDate()}`
+
+  new_date.setFullYear(Number(year), Number(month) - 1, Number(day));
   new_date.setDate(new_date.getDate() + 1);
 
-  journy.trips.push({id:journy.trips.length,type:'Station',name:trip?.name ?? '',start:{date:`${new_date.getFullYear()}/${new_date.getMonth() + 1}/${new_date.getDate()}`,time:'08:00'},end:{date:new_date.toLocaleDateString(),time:new_date.toLocaleTimeString()}})
+  journy.trips.push({id:journy.trips.length,type:'Station',name:trip?.name ?? '',start:{date:`${new_date.getFullYear()}/${new_date.getMonth() + 1}/${new_date.getDate()}`,time:'06:00'},end:{date:new_date.toLocaleDateString(),time:new_date.toLocaleTimeString()}})
 }
 
 const selected_walk = (value?: {id:number}):void => {
@@ -256,6 +270,9 @@ const change_st = async (value?: changes) => {
       if (value?.name) {
         trip.name = value.name;
       }
+      if(value?.selected){
+        trip.selected = value.selected;
+      }
       if (value?.start?.latitude !== undefined || value?.start?.longitude !== undefined) {
         trip.start.latitude = value.start.latitude;
         trip.start.longitude = value.start.longitude;
@@ -269,19 +286,70 @@ const change_st = async (value?: changes) => {
         }
 
       }
+      journy.trips = journy.trips.filter(item => item.id <= value.id)
+      console.log("change_st",journy)
     }
   }
 }
 
 const draw = (value?: {id:number, geometry:any}):void =>{
+  console.log("called draw")
+  console.log("id:",value?.id)
   if (value?.geometry) {
       if (value.geometry.type === 'LineString') {
-          walk_lines.push({id: value.id, geometry: value.geometry});
+          const trip = journy.trips.find(item => item.id === value.id);
+          if (trip) {
+            if (trip.type === 'Walk') {
+              if(walk_lines.find(item => item.id === value.id)){
+                const index = walk_lines.findIndex(item => item.id === value.id);
+                walk_lines[index].geometry = value.geometry;
+              }else{
+                walk_lines.push({id: value.id, geometry: value.geometry});
+              }
+            }else if (trip.type === 'Line') {
+              if(transport_lines.find(item => item.id === value.id)){
+                const index = transport_lines.findIndex(item => item.id === value.id);
+                transport_lines[index].geometry = value.geometry;
+              }else{
+                transport_lines.push({id: value.id, geometry: value.geometry});
+              }
+            }
+          }
       } else if (value.geometry.type === 'Point') {
-          points.push({id: value.id, geometry: value.geometry});
+          if(points.find(item => item.id === value.id)){
+            const index = points.findIndex(item => item.id === value.id);
+            points[index].geometry = value.geometry;
+          }else{
+            points.push({id: value.id, geometry: value.geometry});
+          }
       }
   }
-  console.log("draw",value);
+  //console.log("draw",value);
+}
+
+const centering = (value?: {id:number}) => {
+  const id = value?.id;
+  const trip = journy.trips.find(item => item.id === id);
+  if (trip) {
+    if (trip.type == "Station"){
+      map_center.value = [
+        trip.start.latitude ?? map_center.value[0],
+        trip.start.longitude ?? map_center.value[1]
+      ];
+    }else{
+      console.log("centering", trip)
+      if(trip.start.latitude == undefined || trip.start.longitude == undefined || trip.end.latitude == undefined || trip.end.longitude == undefined){
+        map_zoom.value = 8;
+        return;
+      }
+      map_bounds.value = [
+        [trip.start.latitude ?? 0, trip.start.longitude ?? 0],
+        [trip.end.latitude ?? 0, trip.end.longitude ?? 0]
+      ];
+      console.log("map_bounds",map_bounds.value)
+    }
+    
+  }
 }
 
 const change_walk = (value?: changes):void => {
@@ -313,32 +381,58 @@ const change_walk = (value?: changes):void => {
                       @walk="selected_walk"
                       @change="change_st"
                       @draw="draw"
+                      @centering="centering"
             />
           </div>
           <div v-else-if="trip.type == 'Line'" class="sectioon">
-            <Line :trip="trip" :edit="true" @selected="selected_stop" @changed="changed_el"/>
+            <Line :trip="trip" :edit="true"
+                    @selected="selected_stop"
+                    @changed="changed_el"
+                    @draw="draw"
+                    @centering="centering"
+            />
           </div>
           <div v-else-if="trip.type == 'Stay'" class="sectioon">
             <Stay/>
           </div>
           <div v-else-if="trip.type == 'Walk'" class="sectioon" >
-            <Walk :trip="trip" @changed="change_walk" @draw="draw"/>
+            <Walk :trip="trip"
+              @changed="change_walk"
+              @draw="draw"
+              @centering="centering"
+            />
           </div>
         </template>
+        <div class="margin"></div>
       </div>
     </div>
     <div class="map">
-    <LMap id="map" :zoom="8" :center="[32.205869963387336, 131.336749005514]" :use-global-leaflet="false">
+    <LMap id="map"
+        :zoom="map_zoom"
+        :center="map_center"
+        :bounds="map_bounds"
+        :use-global-leaflet="false"
+        v-on:update:bounds="console.log('bounds updated', $event)"
+      >
       <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" ></LTileLayer>
+      <LControlZoom position="bottomright"  />
       <LMarker
         v-for="point in points"
         :key="point.id"
         :latLng="point.geometry?.coordinates"
       />
-
       <LPolyline
         v-for="line in walk_lines"
         :key="line.id"
+        :lat-lngs="line.geometry?.coordinates"
+        :weight="5"
+        dash-array="10,20"
+        color="#3388ff"
+      />
+      <LPolyline
+        v-for="line in transport_lines"
+        :key="line.id"
+        :weight="5"
         :lat-lngs="line.geometry?.coordinates"
         color="#3388ff"
       />
@@ -377,16 +471,57 @@ const change_walk = (value?: changes):void => {
   margin-right: 50px;
 }
 .detail {
-    width:270px;
+    width: 30vw;
+    max-width:270px;
+    
 }
 .times{
+  width: 20vw;
   display: flex;
   flex-direction: column;
 }
-.sectioon {
-  margin-bottom: 20px;
+.sectioon{
+  width: fit-content;
+  margin-bottom: 20px !important;
+  margin: auto;
+  
 }
 .margin {
   margin-bottom: 20vh;
 }
+@media (max-width: 500px) {
+  .times{
+    width: 30vw !important;
+  }
+  .time{
+    margin: auto !important;
+  }
+  .time .date{
+    display: none;
+  }
+  .detail{
+    width: 70vw;
+  }
+  
+
+  .times svg{
+    width: 30vw;
+  }
+
+}
+@media (max-width: 750px){
+  .box{
+    flex-direction: column;
+  }
+  .box .journy{
+    height: 50vh;
+    width: 100vw;
+  }
+  .box .map{
+    height: 50vh;
+    width: 100vw;
+  }
+
+}
+
 </style>

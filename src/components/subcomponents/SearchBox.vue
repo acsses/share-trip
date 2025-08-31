@@ -24,12 +24,14 @@ const selected_candi = async (event: Event) => {
 </script>
 
 <template>
+  <div>
     <h3 contenteditable="true" @input="edit_name"></h3>
     <div class="candi_list" v-if="candi_list.length > 0">
       <div v-for="item in candi_list" :key="item.name" @click="selected_candi">
         {{ item.name }}
       </div>
     </div>
+  </div>
 </template>
 <style scoped>
 h3{
@@ -41,7 +43,7 @@ h3:focus {
 }
 .candi_list {
   background-color: #242424;
-  position: absolute;
+  position: relative;
   display: block;
   width: 270px;
   max-height: 400px;

@@ -20,8 +20,15 @@ export type changes = {
     latitude?: number;
     longitude?: number;
   };
-  geometry?:any;
+  selected?: any;
+  geometry?:geometry;
   kind?: string;
+};
+
+export type geometry = {
+  type: string;
+  bbox?: [number, number, number, number];
+  coordinates?: number[][] | number[];
 };
 
 export type Trip = {
@@ -42,7 +49,8 @@ export type Trip = {
     latitude?: number;
     longitude?: number;
   };
-  geometry?:any;
+  selected?:any;
+  geometry?:geometry;
   kind?: string;
   editable?: boolean;
   href?: string; // Added href to Trip type

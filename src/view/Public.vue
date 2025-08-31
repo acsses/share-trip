@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive,onMounted } from 'vue';
+import { reactive,onMounted,ref } from 'vue';
 
 import Station from '../components/Station.vue';
 import Line from '../components/Line.vue';
@@ -9,6 +9,7 @@ import Walk from '../components/Walk.vue';
 import { type Trip} from  '../components/types'
 
 import axios from 'axios'
+import { LMap, LTileLayer, LPolyline, LMarker, LControlZoom } from '@vue-leaflet/vue-leaflet';
 
 
 const props = defineProps<{
@@ -30,6 +31,12 @@ const journy = reactive({
   },
   trips: [] as Trip[]
 })
+
+const points = reactive<{id:number,geometry?:any}[]>([])
+const walk_lines = reactive<{id:number,geometry?:any}[]>([])
+const transport_lines = reactive<{id:number,geometry?:any}[]>([])
+
+const map_center = ref<[number, number]>([32.205869963387336, 131.336749005514])
 
 const now_date = new Date();
 
@@ -58,29 +65,101 @@ onMounted(async () => {
 })
 console.log(props.id)
 
+const draw = (value?: {id:number, geometry:any}):void =>{
+  console.log("called draw")
+  if (value?.geometry) {
+      if (value.geometry.type === 'LineString') {
+          const trip = journy.trips.find(item => item.id === value.id);
+          if (trip) {
+            if (trip.type === 'Walk') {
+              walk_lines.push({id: value.id, geometry: value.geometry});
+            }else if (trip.type === 'Line') {
+              transport_lines.push({id: value.id, geometry: value.geometry});
+            }
+          }
+      } else if (value.geometry.type === 'Point') {
+          points.push({id: value.id, geometry: value.geometry});
+      }
+  }
+  console.log("draw",value);
+}
 
+const marker_click = (value: {id:number}) =>{
+  console.log("marker clicked")
+  const target = document.getElementById(String(value.id));
+  if (target) {
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+}
+
+const centering = (value?: {id:number}) => {
+  const id = value?.id;
+  const trip = journy.trips.find(item => item.id === id);
+  if (trip) {
+    map_center.value = [
+      trip.start.latitude ?? map_center.value[0],
+      trip.start.longitude ?? map_center.value[1]
+    ];
+  }
+}
 
 </script>
 
 <template>
   <Header :header="journy.header" :edit="false"/>
-  <div class="margin"></div>
-  <div>
-    <template v-for="trip in journy.trips" :key="trip.name">
-      <div v-if="trip.type == 'Station'" class="section">
-        <Station :trip="trip" :edit="false"/>
-      </div>
-      <div v-else-if="trip.type == 'Line'" class="section">
-        <Line :trip="trip" :edit="false" />
-      </div>
-      <div v-else-if="trip.type == 'Stay'" class="section">
-        <Stay/>
-      </div>
-      <div v-else-if="trip.type == 'Walk'" class="section">
-        <Walk :trip="trip"/>
-      </div>
-    </template>
+  <div class="box">
+    <div class="journy">
+      <div class="margin"></div>
+        <div>
+          <template v-for="trip in journy.trips" :key="trip.name">
+            <div v-if="trip.type == 'Station'" class="section">
+              <Station :trip="trip" :edit="false"
+                @draw="draw"
+                @centering="centering"
+                :id="trip.id"
+              />
+            </div>
+            <div v-else-if="trip.type == 'Line'" class="section">
+              <Line :trip="trip" :edit="false" @draw="draw" />
+            </div>
+            <div v-else-if="trip.type == 'Stay'" class="section">
+              <Stay/>
+            </div>
+            <div v-else-if="trip.type == 'Walk'" class="section">
+              <Walk :trip="trip" @draw="draw"/>
+            </div>
+          </template>
+        </div>
+    </div>
+    <div class="map">
+    <LMap id="map" :zoom="8" :center="map_center" :use-global-leaflet="false">
+      <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" ></LTileLayer>
+      <LControlZoom position="bottomright"  />
+      <LMarker
+        v-for="point in points"
+        :key="point.id"
+        :latLng="point.geometry?.coordinates"
+        @click="marker_click({id: point.id})"
+      />
+      <LPolyline
+        v-for="line in walk_lines"
+        :key="line.id"
+        :lat-lngs="line.geometry?.coordinates"
+        color="#3388ff"
+      />
+      <LPolyline
+        v-for="line in transport_lines"
+        :key="line.id"
+        :lat-lngs="line.geometry?.coordinates"
+        color="#3388ff"
+      />
+    </LMap>
+    </div>
   </div>
+  
 </template>
 
 <style>
@@ -100,11 +179,13 @@ console.log(props.id)
   display: flex;
   flex-direction: column;
 }
-.sectioon {
+.section {
+  width: fit-content;
   margin-bottom: 20px;
+  margin: auto;
 }
 .margin {
-  margin-bottom: 40px;
+  margin-bottom: 20vh;
 }
 @media (max-width: 500px) {
   .times{
@@ -120,8 +201,22 @@ console.log(props.id)
     width: 70vw;
   }
 
-  svg{
+  .times svg{
     width: 30vw;
+  }
+
+}
+@media (max-width: 750px){
+  .box{
+    flex-direction: column;
+  }
+  .box .journy{
+    height: 50vh;
+    width: 100vw;
+  }
+  .box .map{
+    height: 50vh;
+    width: 100vw;
   }
 
 }

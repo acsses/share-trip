@@ -32,7 +32,8 @@ const emit = defineEmits<{
   (e:'walk',value?:{
     id:number,
   }):void,
-  (e:'draw',value?:{id:number, geometry:any}):void
+  (e:'draw',value?:{id:number, geometry:any}):void,
+  (e:'centering',value?:{id:number}):void
 
 }>()
 
@@ -41,6 +42,10 @@ const line_list = ref<{line:string,dir_list:{text:string,href:string}[]}[]>([])
 const dir_list = ref<{text:string,href:string}[]>([])
 
 const selected = ref<string>('')
+
+const next = ref<string>('')
+const line = ref<string>('')
+const dir = ref<string>('')
 
 onMounted(async () => {
   const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/search",{params:{search:props.trip.name}})
@@ -52,8 +57,36 @@ onMounted(async () => {
   
   emit('draw', {id: props.trip.id, geometry: geometry});
 
+  console.log(props.trip.selected)
+
+  next.value = props.trip.selected?.next ?? '';
+
+  await fetch_line()
+
+  line.value = props.trip.selected?.line ?? '';
+
+  await fetch_dir(line.value);
+
+  dir.value = props.trip.selected?.dir ?? '';
+
 })
 
+const fetch_line = async () => {
+  const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/station",{params:{
+      name:props.trip.name,
+      kind:props.trip.kind,
+      date:props.trip.start.date.split('/').join('-')
+    }})
+  line_list.value = response.data.result
+}
+
+const fetch_dir = async (line:string) => {
+  if(!line || line === ''){
+    return;
+  }
+  const selected_line = line_list.value.find(item => item.line === line);
+  dir_list.value = selected_line?.dir_list ?? [];
+}
 
 const select_next = async (event: Event) => {
 
@@ -67,17 +100,23 @@ const select_next = async (event: Event) => {
       changes.start.latitude = Number(loc.lat ?? '0');
       changes.start.longitude = Number(loc.lon ?? '0');
   }
+  const target = event.target as HTMLSelectElement;
+
+  next.value = target.value;
 
   
 
   changes.start.date = props.trip.start.date
   changes.start.time = props.trip.start.time
+  if(!changes.selected){
+    changes.selected = { next: '', line: '' };
+  }
+  changes.selected.next = target.value;
   emit('change', changes);
 
-  const target = event.target as HTMLSelectElement;
+  
   if(target.value == 'line'){
-    const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/station",{params:{name:props.trip.name,kind:props.trip.kind}})
-    line_list.value = response.data.result
+    await fetch_line();
   }else if (target.value == 'stay'){
     emit('stay',{id:props.trip.id})
     dir_list.value = [];
@@ -87,17 +126,69 @@ const select_next = async (event: Event) => {
     dir_list.value = [];
     selected.value = '';
   }
+
+  console.log(next.value)
 }
 
 const select = (event: Event) => {
   const target = event.target as HTMLSelectElement;
   selected.value = target.value;
+
+  line.value = target.value;
+
+  const changes: changes = props.trip;
+
+  changes.id = props.trip.id;
+  changes.name = props.trip.name;
+  changes.kind = props.trip.kind;
+  if (!changes.start) {
+    changes.start = { date: '', time: '' };
+  }
+  changes.start.date = props.trip.start.date;
+  changes.start.time = props.trip.start.time;
+  if (!changes.end) {
+    changes.end = { date: '', time: '' };
+  }
+  changes.end.date = props.trip.end.date;
+  changes.end.time = props.trip.end.time;
+  if(!changes.selected){
+    changes.selected = { next: '', line: '' };
+  }
+  changes.selected.next = props.trip.selected.next;
+  changes.selected.line = selected.value;
+  emit("change",changes);
   const selected_line = line_list.value.find(item => item.line === selected.value);
   dir_list.value = selected_line?.dir_list ?? [];
 }
 
 const select_line = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
+
+  dir.value = target.value;
+
+  const changes: changes = props.trip;
+
+  changes.id = props.trip.id;
+  changes.name = props.trip.name;
+  changes.kind = props.trip.kind;
+  if (!changes.start) {
+    changes.start = { date: '', time: '' };
+  }
+  changes.start.date = props.trip.start.date;
+  changes.start.time = props.trip.start.time;
+  if (!changes.end) {
+    changes.end = { date: '', time: '' };
+  }
+  changes.end.date = props.trip.end.date;
+  changes.end.time = props.trip.end.time;
+  if(!changes.selected){
+    changes.selected = { next: '', line: '' };
+  }
+  changes.selected.next = props.trip.selected.next;
+  changes.selected.line = props.trip.selected.line;
+  changes.selected.dir = target.value;
+  emit("change",changes);
+
 
   emit('selected',{
     id:props.trip.id,
@@ -123,7 +214,7 @@ const selected_candi = (event?: { name: string, kind?: string, location?: { lat:
 </script>
 
 <template>
-  <div class="Station">
+  <div class="Station" @click="emit('centering', { id: props.trip.id })">
     <div class="times">
       <h3 class="time"><span class="date">{{ props.trip.start.date }}</span> {{ props.trip.start.time }}</h3>
     </div>
@@ -131,17 +222,17 @@ const selected_candi = (event?: { name: string, kind?: string, location?: { lat:
       <SearchBox v-if="props.trip.editable" @change="selected_candi"></SearchBox>
       <h3 v-else>{{ props.trip.name }}</h3>
 
-      <select @change="select_next" v-if="props.edit">
+      <select @change="select_next" v-if="props.edit" :value="next">
         <option value=""></option>
         <option value="line">鉄道</option>
         <option value="stay">宿泊</option>
         <option value="walk">徒歩</option>
       </select>
-      <select @change="select" v-if="props.edit">
+      <select @change="select" v-if="props.edit" :value="line">
         <option value="">   </option>
         <option v-for="item in line_list" :key="item.line">{{ item.line }}</option>
       </select>
-      <select @change="select_line" v-if="props.edit">
+      <select @change="select_line" v-if="props.edit" :value="dir">
         <option value="">   </option>
         <option v-for="item in dir_list" :key="item.text" :value="item.href">{{ item.text }}</option>
       </select>
@@ -161,7 +252,8 @@ const selected_candi = (event?: { name: string, kind?: string, location?: { lat:
   -webkit-appearance: none;
   appearance: none;
 
-  width: 80px;
+  width: 6vw;
+  max-width: 80px;
   margin-left: 5px;
   margin-right: 5px;
   padding: 5px;
@@ -177,7 +269,8 @@ const selected_candi = (event?: { name: string, kind?: string, location?: { lat:
   -webkit-appearance: none;
   appearance: none;
 
-  width: 80px;
+  width: 6vw;
+  max-width: 80px;
   margin-left: 5px;
   margin-right: 5px;
   padding: 5px;
@@ -209,5 +302,14 @@ const selected_candi = (event?: { name: string, kind?: string, location?: { lat:
 .detail {
   height: fit-content;
   max-height: 90px;
+}
+.detail h3{
+  height: 28px;
+  overflow: hidden;
+}
+@media (max-width: 750px) {
+  .Station select {
+    width: 50px;
+  }
 }
 </style>

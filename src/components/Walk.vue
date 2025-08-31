@@ -1,5 +1,5 @@
 <template>
-    <div class="Walk">
+    <div class="Walk" @click="emit('centering', { id: props.trip.id })">
         <div class="times">
           
           <svg viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
@@ -31,22 +31,23 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e:'changed',value?:changes):void,
-  (e:'draw',value?:{id:number, geometry:any}):void
+  (e:'draw',value?:{id:number, geometry:any}):void,
+  (e:'centering',value?:{id:number}):void
 }>()
 
 watch(() => props.trip, async (newTrip) => {
-  if (newTrip.start.longitude !== undefined && newTrip.start.latitude !== undefined){
-    console.log(props.trip.start.latitude, props.trip.start.longitude)
+  
+  if (newTrip.start.longitude !== undefined && newTrip.start.latitude !== undefined) {
+
   }
-  console.log(props.trip.end.latitude, props.trip.end.longitude);
   if (newTrip.end.longitude !== undefined && newTrip.end.latitude !== undefined) {
 
     if (newTrip.geometry !== undefined) {
+      emit('draw', {id: props.trip.id, geometry: props.trip.geometry});
       return;
     }
 
-    console.log(String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude))
-    console.log(String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude))
+    
     const response =await axios.get("https://navitime-route-walk.p.rapidapi.com/shape_walk",
           {
             headers: {
@@ -65,8 +66,9 @@ watch(() => props.trip, async (newTrip) => {
         )
 
     console.log(response.data)
-    var geometry: {type:string,coordinates:Number[][]} = {
+    var geometry: {type:string,bbox:[number, number, number, number],coordinates:number[][]} = {
       type:response.data.features[0].geometry.type,
+      bbox : response.data.bbox as [number, number, number, number],
       coordinates: []
     }
 
@@ -90,6 +92,8 @@ watch(() => props.trip, async (newTrip) => {
     emit('changed', changes);
     emit('draw', {id: props.trip.id, geometry: geometry});
   }
+  console.log("react2")
+  emit('draw', {id: props.trip.id, geometry: props.trip.geometry});
 }, { immediate: true,deep: true });
 
 </script>
@@ -100,7 +104,6 @@ watch(() => props.trip, async (newTrip) => {
   align-items: top;
 }
 .times {
-  width: 220px;
   height: 68px;
   justify-content: center;
 }
@@ -108,6 +111,12 @@ watch(() => props.trip, async (newTrip) => {
     margin: 0;
     color: #9c9c9c;
     margin-right: 50px;
+}
+.times svg{
+    height: 68px;
+    width: 85px;
+    margin: auto;
+
 }
 
 </style>

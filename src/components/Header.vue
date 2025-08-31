@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { type header } from './types';
 
 const props = defineProps<{
@@ -22,6 +22,21 @@ onMounted(() => {
     destination.value = props.header.destination;
     travelType.value = props.header.travelType;
     name.value = props.header.name;
+
+    console.log(name.value);
+    console.log(props);
+});
+
+watch(() => props.header, (newHeader) => {
+    season.value = newHeader.season;
+    month.value = newHeader.month;
+    day.value = newHeader.day;
+    destination.value = newHeader.destination;
+    travelType.value = newHeader.travelType;
+    name.value = newHeader.name;
+
+    console.log(name.value);
+    console.log(newHeader.name);
 });
 
 const emit = defineEmits<{

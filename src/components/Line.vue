@@ -74,6 +74,7 @@ watch(() => props.trip, async (newTrip) => {
               datum: 'wgs84',
               order: 'transit',
               options: 'transport_shape',
+              unuse:'domestic_flight',
               use_car: false
             }
           }

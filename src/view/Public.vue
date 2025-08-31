@@ -37,6 +37,8 @@ const walk_lines = reactive<{id:number,geometry?:any}[]>([])
 const transport_lines = reactive<{id:number,geometry?:any}[]>([])
 
 const map_center = ref<[number, number]>([32.205869963387336, 131.336749005514])
+const map_bounds = ref<[[number, number], [number, number]]>([[0, 0], [0, 0]]);
+const map_zoom = ref<number>(8);
 
 const now_date = new Date();
 
@@ -99,10 +101,24 @@ const centering = (value?: {id:number}) => {
   const id = value?.id;
   const trip = journy.trips.find(item => item.id === id);
   if (trip) {
-    map_center.value = [
-      trip.start.latitude ?? map_center.value[0],
-      trip.start.longitude ?? map_center.value[1]
-    ];
+    if (trip.type == "Station"){
+      map_center.value = [
+        trip.start.latitude ?? map_center.value[0],
+        trip.start.longitude ?? map_center.value[1]
+      ];
+    }else{
+      console.log("centering", trip)
+      if(trip.start.latitude == undefined || trip.start.longitude == undefined || trip.end.latitude == undefined || trip.end.longitude == undefined){
+        map_zoom.value = 8;
+        return;
+      }
+      map_bounds.value = [
+        [trip.start.latitude ?? 0, trip.start.longitude ?? 0],
+        [trip.end.latitude ?? 0, trip.end.longitude ?? 0]
+      ];
+      console.log("map_bounds",map_bounds.value)
+    }
+    
   }
 }
 
@@ -123,7 +139,7 @@ const centering = (value?: {id:number}) => {
               />
             </div>
             <div v-else-if="trip.type == 'Line'" class="section">
-              <Line :trip="trip" :edit="false" @draw="draw" />
+              <Line :trip="trip" :edit="false" @draw="draw" @centering="centering"/>
             </div>
             <div v-else-if="trip.type == 'Stay'" class="section">
               <Stay/>
@@ -135,7 +151,13 @@ const centering = (value?: {id:number}) => {
         </div>
     </div>
     <div class="map">
-    <LMap id="map" :zoom="8" :center="map_center" :use-global-leaflet="false">
+    <LMap id="map"
+        :zoom="map_zoom"
+        :center="map_center"
+        :bounds="map_bounds"
+        :use-global-leaflet="false"
+        v-on:update:bounds="console.log('bounds updated', $event)"
+      >
       <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" ></LTileLayer>
       <LControlZoom position="bottomright"  />
       <LMarker

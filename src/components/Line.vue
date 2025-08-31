@@ -55,6 +55,8 @@ watch(() => props.trip, async (newTrip) => {
   if (newTrip.start.longitude !== undefined && newTrip.start.latitude !== undefined && (newTrip.end.longitude !== undefined && newTrip.end.latitude !== undefined) && newTrip.kind != "F") {
     const start_date = new Date(newTrip.start.date + ' ' + newTrip.start.time);
     const end_date = new Date(newTrip.end.date + ' ' + newTrip.end.time);
+
+    console.log(import.meta.env.VITE_ROUTE_MANAGER_API_KEY)
     
     const response =await axios.get("https://navitime-route-totalnavi.p.rapidapi.com/shape_transit",
           {

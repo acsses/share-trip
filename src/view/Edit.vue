@@ -45,6 +45,7 @@ const now_date = new Date();
 journy.trips.push({id:0,type:'Station',name:'京都',start:{date:`${now_date.getFullYear()}/${now_date.getMonth() + 1}/${now_date.getDate()}`,time:'08:30'},end:{date:'',time:''},kind:"R",editable:true})
 
 onMounted(async () => {
+  console.log(import.meta.env.VITE_ROUTE_MANAGER_API_KEY)
   if (isNaN(props.id)) {
     console.log('No ID provided');
     return;

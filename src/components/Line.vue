@@ -143,7 +143,7 @@ onMounted(async () => {
   const selected_train = minutes.value.find(item => item.minutes === minute_selected && item.name == props.trip.name);
   minute.value = selected_train?.link ?? '';
   if(minute.value && minute.value !== ''){
-    const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/train",{params:{href:minute.value}})
+    const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/train",{params:{href:minute.value,date:props.trip.start.date.split('/').join('-')}})
 
     train_stops.value = response.data.result
   }
@@ -182,6 +182,8 @@ const selected_train = async (event: Event) => {
     
     name: name.value
   })
+
+  
 
   const response = await axios.get("https://timetable-api-jp-acsses-projects.vercel.app/api/table/train",{params:{href:target.value}})
 

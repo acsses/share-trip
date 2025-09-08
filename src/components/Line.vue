@@ -58,7 +58,7 @@ watch(() => props.trip, async (newTrip) => {
 
     console.log(import.meta.env.VITE_ROUTE_MANAGER_API_KEY)
 
-    if (props.edit){
+    if (props.edit && newTrip.geometry === undefined) {
       const response =await axios.get("https://navitime-route-totalnavi.p.rapidapi.com/shape_transit",
             {
               headers: {

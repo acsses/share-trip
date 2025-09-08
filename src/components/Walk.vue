@@ -27,6 +27,7 @@ import axios from 'axios'
 
 const props = defineProps<{
   trip: Trip
+  edit?: boolean
 }>();
 
 const emit = defineEmits<{
@@ -47,52 +48,58 @@ watch(() => props.trip, async (newTrip) => {
       return;
     }
 
-    
-    const response =await axios.get("https://navitime-route-walk.p.rapidapi.com/shape_walk",
-          {
-            headers: {
-              'X-RapidAPI-Key': import.meta.env.VITE_ROUTE_MANAGER_API_KEY,
-              'X-RapidAPI-Host': 'navitime-route-walk.p.rapidapi.com'
-            },
-            params: {
-              start: String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude),
-              goal: String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude),
-              coord_unit: 'degree',
-              format: 'geojson',
-              datum: 'wgs84',
-              speed: 5
+    if(props.edit){
+      const response =await axios.get("https://navitime-route-walk.p.rapidapi.com/shape_walk",
+            {
+              headers: {
+                'X-RapidAPI-Key': import.meta.env.VITE_ROUTE_MANAGER_API_KEY,
+                'X-RapidAPI-Host': 'navitime-route-walk.p.rapidapi.com'
+              },
+              params: {
+                start: String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude),
+                goal: String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude),
+                coord_unit: 'degree',
+                format: 'geojson',
+                datum: 'wgs84',
+                speed: 5
+              }
             }
-          }
-        )
+          )
 
-    console.log(response.data)
-    var geometry: {type:string,bbox:[number, number, number, number],coordinates:number[][]} = {
-      type:response.data.features[0].geometry.type,
-      bbox : response.data.bbox as [number, number, number, number],
-      coordinates: []
-    }
+      console.log(response.data)
+      var geometry: {type:string,bbox:[number, number, number, number],coordinates:number[][]} = {
+        type:response.data.features[0].geometry.type,
+        bbox : response.data.bbox as [number, number, number, number],
+        coordinates: []
+      }
 
-    for(var feature of response.data.features ){
-      console.log(feature.coordinates)
-      geometry.coordinates = [...geometry.coordinates,...feature.geometry.coordinates?.map((coordinate:[number,number])=>[coordinate[1],coordinate[0]]) ?? []]
+      for(var feature of response.data.features ){
+        console.log(feature.coordinates)
+        geometry.coordinates = [...geometry.coordinates,...feature.geometry.coordinates?.map((coordinate:[number,number])=>[coordinate[1],coordinate[0]]) ?? []]
 
+      }
+
+
+      const changes: changes = {
+        id: props.trip.id,
+        start: props.trip.start,
+
+        end: props.trip.end,
+        name: props.trip.name,
+        kind: props.trip.kind,
+        geometry: geometry
+      };
+
+      emit('changed', changes);
+      emit('draw', {id: props.trip.id, geometry: geometry});
+    }else{
+      if (newTrip.geometry) {
+        emit('draw', {id: props.trip.id, geometry: newTrip.geometry});
+      }
     }
     
-
-    const changes: changes = {
-      id: props.trip.id,
-      start: props.trip.start,
-      
-      end: props.trip.end,
-      name: props.trip.name,
-      kind: props.trip.kind,
-      geometry: geometry
-    };
-
-    emit('changed', changes);
-    emit('draw', {id: props.trip.id, geometry: geometry});
+    
   }
-  console.log("react2")
   emit('draw', {id: props.trip.id, geometry: props.trip.geometry});
 }, { immediate: true,deep: true });
 

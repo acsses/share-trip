@@ -136,6 +136,8 @@ const changed_el = (value?: changes):void => {
     trip.name = value?.name ?? ''
     trip.start = value?.start ?? {date:'',time:''}
     trip.end = value?.end ?? {date:'',time:''}
+    trip.geometry = value?.geometry ?? trip.geometry
+    trip.kind = value?.kind ?? trip.kind
   }
 }
 
@@ -250,6 +252,7 @@ const save = async (value?: header) => {
 
   }
   // This function can be used to save the journey data
+  console.log('Saving journey:', journy);
 
   const response = await axios.post("https://vercel-kv-three.vercel.app/api/save",{id:journy.id, data:JSON.stringify(journy)})
 
@@ -396,7 +399,7 @@ const change_walk = (value?: changes):void => {
             <Stay/>
           </div>
           <div v-else-if="trip.type == 'Walk'" class="sectioon" >
-            <Walk :trip="trip"
+            <Walk :trip="trip" :edit="true"
               @changed="change_walk"
               @draw="draw"
               @centering="centering"

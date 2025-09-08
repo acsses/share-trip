@@ -57,62 +57,71 @@ watch(() => props.trip, async (newTrip) => {
     const end_date = new Date(newTrip.end.date + ' ' + newTrip.end.time);
 
     console.log(import.meta.env.VITE_ROUTE_MANAGER_API_KEY)
-    
-    const response =await axios.get("https://navitime-route-totalnavi.p.rapidapi.com/shape_transit",
-          {
-            headers: {
-              'X-RapidAPI-Key': import.meta.env.VITE_ROUTE_MANAGER_API_KEY,
-              'X-RapidAPI-Host': 'navitime-route-totalnavi.p.rapidapi.com'
-            },
-            params: {
-              start: String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude),
-              goal: String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude),
-              start_time: start_date.getFullYear() + '-' + ( '00' + (start_date.getMonth() + 1)).slice(-2) + '-' + ( '00' + start_date.getDate()).slice(-2) + 'T' + ( '00' + start_date.getHours()).slice(-2) + ':' + ( '00' + start_date.getMinutes()).slice(-2) + ':' + ( '00' + start_date.getSeconds()).slice(-2),
-              end_time: end_date.getFullYear() + '-' + ( '00' + (end_date.getMonth() + 1)).slice(-2) + '-' + ( '00' + end_date.getDate()).slice(-2) + 'T' + ( '00' + end_date.getHours()).slice(-2) + ':' + ( '00' + end_date.getMinutes()).slice(-2) + ':' + ( '00' + end_date.getSeconds()).slice(-2),
-              coord_unit: 'degree',
-              format: 'geojson',
-              datum: 'wgs84',
-              order: 'transit',
-              options: 'transport_shape',
-              unuse:'domestic_flight',
-              use_car: false
+
+    if (props.edit){
+      const response =await axios.get("https://navitime-route-totalnavi.p.rapidapi.com/shape_transit",
+            {
+              headers: {
+                'X-RapidAPI-Key': import.meta.env.VITE_ROUTE_MANAGER_API_KEY,
+                'X-RapidAPI-Host': 'navitime-route-totalnavi.p.rapidapi.com'
+              },
+              params: {
+                start: String(newTrip.start.latitude) + ',' + String(newTrip.start.longitude),
+                goal: String(newTrip.end.latitude) + ',' + String(newTrip.end.longitude),
+                start_time: start_date.getFullYear() + '-' + ( '00' + (start_date.getMonth() + 1)).slice(-2) + '-' + ( '00' + start_date.getDate()).slice(-2) + 'T' + ( '00' + start_date.getHours()).slice(-2) + ':' + ( '00' + start_date.getMinutes()).slice(-2) + ':' + ( '00' + start_date.getSeconds()).slice(-2),
+                end_time: end_date.getFullYear() + '-' + ( '00' + (end_date.getMonth() + 1)).slice(-2) + '-' + ( '00' + end_date.getDate()).slice(-2) + 'T' + ( '00' + end_date.getHours()).slice(-2) + ':' + ( '00' + end_date.getMinutes()).slice(-2) + ':' + ( '00' + end_date.getSeconds()).slice(-2),
+                coord_unit: 'degree',
+                format: 'geojson',
+                datum: 'wgs84',
+                order: 'transit',
+                options: 'transport_shape',
+                unuse:'domestic_flight',
+                use_car: false
+              }
             }
-          }
-        )
+          )
 
-    var geometry: {type:string,bbox:[number,number,number,number],coordinates:number[][]} = {
-      type:response.data.features[0].geometry.type,
-      bbox: [
-        response.data.bbox[0],
-        response.data.bbox[1],
-        response.data.bbox[2],
-        response.data.bbox[3]
-      ],
-      coordinates: []
+      var geometry: {type:string,bbox:[number,number,number,number],coordinates:number[][]} = {
+        type:response.data.features[0].geometry.type,
+        bbox: [
+          response.data.bbox[0],
+          response.data.bbox[1],
+          response.data.bbox[2],
+          response.data.bbox[3]
+        ],
+        coordinates: []
+      }
+
+      for(var feature of response.data.features ){
+        //console.log(feature)
+
+        if (feature?.properties.ways == 'transport'){
+          geometry.coordinates = [
+            ...geometry.coordinates,
+            ...(feature.geometry.coordinates?.map((coordinate: [number, number]) => [Number(coordinate[1]), Number(coordinate[0])]) ?? [])
+          ]
+        }
+      }
+
+      const changes: changes = {
+        id: props.trip.id,
+        start: props.trip.start,
+        end: props.trip.end,
+        name: props.trip.name,
+        kind: props.trip.kind,
+        geometry: geometry
+      };
+
+      emit('changed', changes);
+      emit('draw', {id: props.trip.id, geometry: geometry});
+
     }
-
-    for(var feature of response.data.features ){
-      //console.log(feature)
-
-      if (feature?.properties.ways == 'transport'){
-        geometry.coordinates = [
-          ...geometry.coordinates,
-          ...(feature.geometry.coordinates?.map((coordinate: [number, number]) => [Number(coordinate[1]), Number(coordinate[0])]) ?? [])
-        ]
+    else{
+      const geometry = props.trip.geometry
+      if (geometry) {
+        emit('draw', {id: props.trip.id, geometry: geometry});
       }
     }
-
-    const changes: changes = {
-      id: props.trip.id,
-      start: props.trip.start,
-      end: props.trip.end,
-      name: props.trip.name,
-      kind: props.trip.kind,
-      geometry: geometry
-    };
-
-    emit('changed', changes);
-    emit('draw', {id: props.trip.id, geometry: geometry});
   }
   emit('draw', {id: props.trip.id, geometry: props.trip.geometry});
 }, { immediate: true,deep: true })
